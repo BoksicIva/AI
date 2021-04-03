@@ -1,7 +1,52 @@
 import sys
 from decimal import Decimal
 from pathlib import Path
+from queue import PriorityQueue
+from collections import OrderedDict
+import time
 
+
+class Node:
+    def __init__(self, name, path, total_cost, h_value, neigbours):
+        self.name = name
+        self.path = path
+        self.total_cost = total_cost
+        self.h_value = h_value
+        self.neigbours = neigbours
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __repr__(self):
+        return f'Node(name={self.name}, cost={self.total_cost})'
+
+
+class Transition:
+    def __init__(self, node, cost, total_cost, path):
+        self.node = node
+        self.cost = cost
+        self.total_cost = total_cost
+        self.path = path
+
+    def __lt__(self, other):
+        return self.node.name < other.node.name
+
+
+class Timer:
+    def __init__(self):
+        self.counter = 0
+        self.sumTime = 0.0
+
+    def startF(self):
+        self.start = time.time()
+        self.counter += 1
+
+    def endF(self):
+        self.end = time.time()
+        self.sumTime = self.sumTime + self.end - self.start
+
+    def sumAllTime(self):
+        print(self.sumTime)
 
 
 def heuristic(path2):
@@ -11,210 +56,216 @@ def heuristic(path2):
         for line in file:
             if not line.startswith('#'):
                 x = line.split()
-                hueristic_values[x[0][:len(x[0])-1]] = x[1]
+                hueristic_values[x[0][:len(x[0]) - 1]] = x[1]
     return hueristic_values
 
 
-def transition(path1,heuristics):
+def transition(path1, heuristics):
     transitions = {}
-    cities = {}
     counter = 0
-    with open(path1, encoding='utf-8') as file:
+    lista = []
+    timer2 = Timer()
+    timer = Timer()
+    timer.startF()
+    timer3 = Timer()
+    with open(path1, encoding="UTF-8") as file:
         for line in file:
+
             if not line.startswith('#'):
+
                 if counter == 0:
                     start = line.strip('\n')
                     counter = counter + 1
+
                 elif counter == 1:
                     counter = counter + 1
-                    end = line.strip('\n').split(',')
-                else:
+                    end = line.strip('\n').split(' ')
                     counter = counter + 1
-                    cities = []
+
+                else:
                     x = line.strip('\n').split()
                     state = x[0][:len(x[0]) - 1]
+                    cities = []
+
                     for i in range(1, len(x)):
-                        city = {}
-                        city_and_cost = x[i].split(',')
-                        city["city"]=city_and_cost[0]
-                        city["cost"] = city_and_cost[1]
-                        city["path"]=''
-                        city["total_cost"]=0
-                        city["h_value"]=heuristics[city_and_cost[0]]
-                        cities.append(city)
-                    cities = sorted(cities, key=lambda k: k['city'])
-                    transitions[state] = cities
-    return start, end, transitions
+                        name_and_cost = x[i].split(',')
+
+                        nodeExists = transitions.get(name_and_cost[0], False)
+                        timer2.startF()
+                        if nodeExists == False:
+                            nextNode = Node(name_and_cost[0], name_and_cost[0], 0, 0, [])
+                            if heuristics:
+                                nextNode.h_value = heuristics[name_and_cost[0]]
+                            newTransition = Transition(nextNode, name_and_cost[1],0,name_and_cost[0])
+                            transitions[name_and_cost[0]] =nextNode
+                        else:
+                            newTransition = Transition(nodeExists, name_and_cost[1],0,name_and_cost[0])
+
+                        cities.append(newTransition)
+                        timer2.endF()
+
+                    timer3.startF()
+                    cities = sorted(cities) ## provjeri suta koliko se vrti
+                    timer3.endF()
+
+                    mainNode = transitions.get(state, False)
+                    if mainNode:
+                        mainNode.neigbours = cities
+                    else:
+
+                        mainNode = Node(state, state, 0, 0, cities)
+                        if heuristics:
+                            mainNode.h_value = heuristics[state]
+                    transitions[state] = mainNode
+                    if state == start:
+                        startNode = mainNode
+
+    timer.endF()
+    timer2.sumAllTime()
+    timer.sumAllTime()
+    timer3.sumAllTime()
+    end_dict = {}
+    for city in end:
+        end_dict[city] = city
+    return startNode, end_dict, transitions
+
 
 
 def bfs(s0, suc, goal):
-    open = [{'city': s0, 'cost': 0, 'path': s0, 'total_cost': 0}]
-    visited = []
-    while open:
+    open = []
+    open.append(s0)
+    visited = {}
+    counter = 1
+
+    while len(open) != 0:
         n = open.pop(0)
-        while True:
-            if n["city"] in visited:
-                n = open.pop(0)
-            else:
-                break
-        print(n["city"]+ "  "+str(n["total_cost"]))
-        visited.append(n["city"])
-        visited = list(dict.fromkeys(visited))
-        if n['city'] in goal:
-            return n,visited
-        expand = suc[n['city']]
-        for state in expand:
-            if state["city"] not in visited:
-                state["path"] = n["path"] + " => " + state["city"]
-                state["total_cost"] = n["total_cost"] + int(state["cost"])
-                open.append(state)
-    return False
+
+        visited[n.name] = n.name
+
+        if n.name in goal:
+            return n, visited
+
+        expand = n.neigbours
+        for trans in expand:
+            if trans.node.name not in visited:
+                trans.node.path = n.path + " => " + trans.node.name
+                trans.node.total_cost = n.total_cost + int(trans.cost)
+                open.append(trans.node)
+        counter += 1
+
+    return False, False
 
 
 def ucs(s0, suc, goal):
-    open = [{'city': s0, 'cost': 0, 'path': s0, 'total_cost': 0}]
-    visited=[]
+    open = PriorityQueue()
+    open.put((0, s0, s0.name))
+    visited= {}
     while open:
-        n = open.pop(0)
+        all = open.get()
+        n = all[1]
+        n.total_cost = all[0]
+        n.path = all[2]
+
         while True:
-            if n["city"] in visited:
-                n=open.pop(0)
+            if open and visited and n.name in visited:
+                all = open.get()
+                n = all[1]
+                n.total_cost = all[0]
+                n.path = all[2]
             else:
                 break
-        visited.append(n["city"])
-        visited = list(dict.fromkeys(visited))
-        if n['city'] in goal:
-            return n,visited
-        expand = suc[n['city']]
-        for state in expand:
-            if state["city"] not in visited:
-                state["path"] = n["path"] + " => " + state["city"]
-                state["total_cost"] = n["total_cost"] + float(state["cost"])
-                open.append(state)
-        open = sorted(open, key=lambda x: float(x['total_cost']))
-        open=[dict(t) for t in {tuple(sorted(d.items())) for d in open}]
-        open = sorted(open, key=lambda x: (Decimal(x['total_cost']),x["city"]))
-    return False
+        visited[n.name] = n.name
 
-def astar(s0,suc,goal,h):
-    open = [{'city': s0, 'cost': 0, 'path': s0, 'total_cost': 0}]
-    closed = []
-    visited = []
+        if n.name in goal:
+            return n, visited
+
+        expand = n.neigbours
+
+        for trans in expand:
+            if trans.node.name not in visited:
+                trans.path = n.path + " => " + trans.node.name
+                trans.total_cost = n.total_cost + int(trans.cost)
+                open.put((trans.total_cost, trans.node, trans.path))
+
+    return False, False
+
+
+def astar(s0, suc, goal, h):
+    open = PriorityQueue()
+    open.put((0, s0, s0.name, 0))
+    open_dict={}
+    open_dict[s0.name]=s0.name
+    visited = {}
     while open:
-        n = open.pop(0)
+        all = open.get()
+        n = all[1]
+        n.total_cost = float(all[3])
+        n.path = all[2]
         while True:
-            if n["city"] in closed:
-                n = open.pop(0)
+            if open and visited and n.name in visited:
+                all = open.get()
+                n = all[1]
+                n.total_cost = float(all[3])
+                n.path = all[2]
             else:
                 break
-        closed.append(n)
-        if n['city'] in goal:
-            return n, closed
-        expand = suc[n['city']]
-        for state in expand:
-            v,o=-1,-1
-            for i in range(0,len(closed)):
-                if closed[i]["city"] == state["city"]:
-                    v=i
-            for i in range(0, len(open)):
-                if open[i]["city"] == state["city"]:
-                    o=i
-            if v>=0 and closed:
-                if float(closed[v]["total_cost"]) < float(n["total_cost"])+float(state["cost"]):
-                    continue
-                else:
-                    closed.insert(v,state)
-                    closed.pop(v+1)
-            if o>=0 and open:
-                if float(open[o]["total_cost"]) < float(n["total_cost"])+float(state["cost"]):
-                    continue
-                else:
-                    open.insert(o,state)
-                    open.pop(o+1)
-            if state["city"] not in visited:
-                state["path"] = n["path"] + " => " + state["city"]
-                state["total_cost"] = float(n["total_cost"]) + float(state["cost"])
-                open.append(state)
-        open = sorted(open, key=lambda x: (float(x['total_cost'])+float(x["h_value"])))
-        open = [dict(t) for t in {tuple(sorted(d.items())) for d in open}]
-        open = sorted(open, key=lambda x: ((float(x['total_cost'])+float(x["h_value"])), x["city"]))
-        closed = [dict(t) for t in {tuple(sorted(d.items())) for d in closed}]
-        visited.append(n["city"])
-        visited = list(dict.fromkeys(visited))
-    return False
+        visited[n.name] = n.name
+        if n.name in goal:
+            return n, visited
+        expand = n.neigbours
+        for trans in expand:
+            if trans.node.name not in visited:
+                trans.path = n.path + " => " + trans.node.name
+                trans.total_cost = n.total_cost + int(trans.cost)
+                open.put((float(trans.total_cost) + float(trans.node.h_value), trans.node, trans.path,
+                          float(trans.total_cost)))
+                open_dict[trans.node.name]=trans.node.name
+    return False, False
 
-def astar2(s0,suc,goal,h,heuristic_path):
-    print("# HEURISTIC-OPTIMISTIC "+Path(heuristic_path).name)
-    open = [{'city': s0, 'cost': 0, 'path': s0, 'total_cost': 0, 'h_value':0}]
-    closed = []
-    visited = []
-    while len(closed) < len(suc):
-        n = open.pop(0)
-        while True:
-            if n["city"] in closed:
-                n = open.pop(0)
-            else:
-                break
-        closed.append(n)
-        expand = suc[n['city']]
-        for state in expand:
-            v,o=-1,-1
-            for i in range(0,len(closed)):
-                if closed[i]["city"] == state["city"]:
-                    v=i
-            for i in range(0, len(open)):
-                if open[i]["city"] == state["city"]:
-                    o=i
-            if v >=0 and closed:
-                if float(closed[v]["total_cost"]) < float(n["total_cost"])+float(state["cost"]):
-                    continue
-                else:
-                    closed.insert(v,state)
-                    closed.pop(v+1)
 
-            if o>=0 and open:
-                if float(open[o]["total_cost"]) < float(n["total_cost"])+float(state["cost"]):
-                    continue
-                else:
-                    open.insert(o,state)
-                    open.pop(o+1)
-            if state["city"] not in visited:
-                state["path"] = n["path"] + " => " + state["city"]
-                state["total_cost"] = float(n["total_cost"]) + float(state["cost"])
-                open.append(state)
-        open = sorted(open, key=lambda x: (float(x['total_cost'])+float(x["h_value"])))
-        open = [dict(t) for t in {tuple(sorted(d.items())) for d in open}]
-        open = sorted(open, key=lambda x: ((float(x['total_cost'])+float(x["h_value"])), x["city"]))
-        closed = [dict(t) for t in {tuple(sorted(d.items())) for d in closed}]
-        visited.append(n["city"])
-        visited = list(dict.fromkeys(visited))
-    return closed
-
-def optimistic(end,transitions,heuristic_values,heuristic_path):
-    print("# HEURISTIC-OPTIMISTIC " + Path(heuristic_path).name)
-    n,visited=astar(end,transitions,end,heuristic_values)
-    visited = sorted(visited, key=lambda x: x["city"])
+def optimistic_f(end, transitions, heuristic_path):
+    print("# HEURISTIC-OPTIMISTIC " + heuristic_path)
     conclusion = ""
-    for item in visited:
-        condition = ("OK" if float(item["h_value"]) <= float(item["total_cost"]) else "ERR")
-        print("[CONDITION]: [" + condition + "] h(" + item["city"] + ") <= h*: " + str(
-            float(item["h_value"])) + " <= " + str(float(item["total_cost"])))
+    for state in transitions:
+        n, visited = ucs(state, transitions, end)
+        condition = ("OK" if float(state.h_value) <= float(n.total_cost) else "ERR")
+        print("[CONDITION]: [" + condition + "] h(" + state.name + ") <= h*: " + str(
+            float(state.h_value)) + " <= " + str(float(n.total_cost)))
         if condition == "ERR":
-            conclusion = "not"
-    print("[CONCLUSION]: Heuristic is " + conclusion + " optimistic.")
+            conclusion = " not"
+    print("[CONCLUSION]: Heuristic is" + conclusion + " optimistic.")
 
-def consistent(heuristic_path,transitions,heuristic_values):
-    print("# HEURISTIC-CONSISTENT " + Path(heuristic_path).name)
-    for city in transitions:
-        for neighbour_city in transitions[city]:
-            condition = ("OK" if float(heuristic_values[city]) <= float(neighbour_city["h_value"])+float(neighbour_city["cost"]) else "ERR")
-            print("[CONDITION]: ["+condition+"] h("+city+") <= h("+neighbour_city["city"]+") + c: "+str(float(heuristic_values[city]))+" <= "+str(float(neighbour_city["h_value"]))+" + "+str(float(neighbour_city["cost"])))
+
+def consistent_f(heuristic_path, transitions, heuristic_values):
+    print("# HEURISTIC-CONSISTENT " + heuristic_path)
+    conclusion = ""
+    for state in transitions:
+        for neigbor in sorted(state.neigbours):
+            condition = ("OK" if float(heuristic_values[state.name]) <= float(neigbor.h_value) + float(
+                neigbor.cost) else "ERR")
+            print("[CONDITION]: [" + condition + "] h(" + state.name + ") <= h(" + neigbor.name + ") + c: " + str(
+                float(heuristic_values[state.name])) + " <= " + str(float(neigbor.h_value)) + " + " + str(
+                float(neigbor.cost)))
             if condition == "ERR":
-                conclusion = "not"
-    print("[CONCLUSION]: Heuristic is " + conclusion + " consistent.")
+                conclusion = " not"
+    print("[CONCLUSION]: Heuristic is" + conclusion + " consistent.")
+
+
+def algoritam_output(n, visited):
+    if n != False:
+        print("[FOUND_SOLUTION]: yes")
+        print("[STATES_VISITED]: " + str(len(visited)))  # str(visited.qsize()))
+        print("[PATH_LENGTH]: " + str(len(n.path.split("=>"))))
+        print("[TOTAL_COST]: " + str(float(n.total_cost)))
+        print("[PATH]: " + n.path)
+    else:
+        print("[FOUND_SOLUTION]: no")
 
 
 def main():
+    heuristic_values = {}
+    optimistic, consistent = False, False
+    algoritam = ""
     for x in range(1, len(sys.argv)):
         if sys.argv[x] == "--alg":
             x = x + 1;
@@ -225,30 +276,30 @@ def main():
         elif sys.argv[x] == '--h':
             x = x + 1
             heuristic_path = sys.argv[x]
+            heuristic_values = heuristic(heuristic_path)
         elif sys.argv[x] == "--check-optimistic":
             optimistic = True
         elif sys.argv[x] == "--check-consistent":
             consistent = True
-    heuristic_values = heuristic(heuristic_path)
-    start, end, transitions = transition(path,heuristic_values)
-    #print(heuristic_values)
-    # print(start)
-    # print(end)
-    #print(transitions)
-    #n,visited=astar(start,transitions,end,heuristic_values)
-    #visited = astar2(end[0], transitions, end, heuristic_values,heuristic_path)
 
+    start, end, transitions = transition(path, heuristic_values)
+    transitions = sorted(transitions)
+    n, visited = False, False
+    if algoritam:
+        if algoritam == "astar":
+            print("# A-STAR " + heuristic_path)
+            n, visited = astar(start, transitions, end, heuristic_values)
+        if algoritam == "bfs":
+            print("# BFS")
+            n, visited = bfs(start, transitions, end)
+        if algoritam == "ucs":
+            print("# UCS")
+            n, visited = ucs(start, transitions, end)
+        algoritam_output(n, visited)
 
-    # if n != False:
-    #     print("[FOUND_SOLUTION]: yes")
-    #     print("[STATES_VISITED]: "+str(len(visited)))
-    #     print("[PATH_LENGTH]: "+str(len(n["path"].split("=>"))))
-    #     print("[TOTAL_COST]: "+str(n["total_cost"]))
-    #     print("[PATH]: "+n["path"])
-    # else:
-    #     print("[FOUND_SOLUTION]: no")
+    if optimistic:
+        optimistic_f(end, transitions, heuristic_path)
 
-
-
-
+    if consistent:
+        consistent_f(heuristic_path, transitions, heuristic_values)
 main()
