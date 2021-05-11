@@ -1,0 +1,5 @@
+~A V B
+~B V C
+A V B
+A
+C

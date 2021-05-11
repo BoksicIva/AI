@@ -1,7 +1,7 @@
 import sys
 from queue import PriorityQueue
 import collections
-import numpy as np
+#import numpy as np
 
 
 class Node:
@@ -104,6 +104,12 @@ def bfs(s0, goal):
 
     while len(open) != 0:
         n = open.pop(0)
+
+        while True:
+            if open and visited and n.name in visited:
+                n = open.pop(0)
+            else:
+                break
 
         visited[n.name] = n.name
 
@@ -216,55 +222,55 @@ def consistent_f(heuristic_path, transitions, heuristic_values):
                 conclusion = " not"
     print("[CONCLUSION]: Heuristic is" + conclusion + " consistent.")
 
-def dijkstra(source, transitions, distance):
-    queue = PriorityQueue()
+# def dijkstra(source, transitions, distance):
+#     queue = PriorityQueue()
+#
+#     # for key in transitions:
+#     #     for neighbor in transitions[key].neighbours:
+#     #         newTransition = Transition(transitions[key],neighbor.cost,0,'')
+#     #         if neighbor.node.neighbours and transitions[key].name != neighbor.node.name:
+#     #             neighbor.node.neighbours.append(newTransition)
+#     #         else:
+#     #             new = [newTransition]
+#     #             neighbor.node.neighbours=new
+#
+#     if not distance:
+#         for state in transitions:
+#             distance[transitions[state].name] = np.inf
+#             if transitions[state].name == source:
+#                 distance[source] = 0
+#             queue.put((distance[transitions[state].name], transitions[state]))
+#
+#     else:
+#         for key in distance:
+#             queue.put((float(distance[key]),transitions[key]))
+#
+#     while queue.qsize() != 0:
+#         n = queue.get()[1]
+#         if  len(n.neighbours) != 0:
+#             expand = n.neighbours
+#
+#             for neighbour in expand:
+#                 new_distance = float(distance[n.name]) + float(neighbour.cost)
+#                 if new_distance < distance[neighbour.node.name]:
+#                     distance[neighbour.node.name] = new_distance
+#
+#     return distance
 
-    # for key in transitions:
-    #     for neighbor in transitions[key].neighbours:
-    #         newTransition = Transition(transitions[key],neighbor.cost,0,'')
-    #         if neighbor.node.neighbours and transitions[key].name != neighbor.node.name:
-    #             neighbor.node.neighbours.append(newTransition)
-    #         else:
-    #             new = [newTransition]
-    #             neighbor.node.neighbours=new
-
-    if not distance:
-        for state in transitions:
-            distance[transitions[state].name] = np.inf
-            if transitions[state].name == source:
-                distance[source] = 0
-            queue.put((distance[transitions[state].name], transitions[state]))
-
-    else:
-        for key in distance:
-            queue.put((float(distance[key]),transitions[key]))
-
-    while queue.qsize() != 0:
-        n = queue.get()[1]
-        if  len(n.neighbours) != 0:
-            expand = n.neighbours
-
-            for neighbour in expand:
-                new_distance = float(distance[n.name]) + float(neighbour.cost)
-                if new_distance < distance[neighbour.node.name]:
-                    distance[neighbour.node.name] = new_distance
-
-    return distance
-
-def optimistic_f2(end, transitions, heuristic_path):
-    print("# HEURISTIC-OPTIMISTIC " + heuristic_path)
-    conclusion = ""
-    distance = {}
-    for state in end:
-        distance = dijkstra(state, transitions, distance)
-
-    for state in transitions:
-        condition = ("OK" if float(transitions[state].h_value) <= float(distance[transitions[state].name]) else "ERR")
-        print("[CONDITION]: [" + condition + "] h(" + transitions[state].name + ") <= h*: " + str(
-            float(transitions[state].h_value)) + " <= " + str(float(distance[transitions[state].name])))
-        if condition == "ERR":
-            conclusion = " not"
-    print("[CONCLUSION]: Heuristic is" + conclusion + " optimistic.")
+# def optimistic_f2(end, transitions, heuristic_path):
+#     print("# HEURISTIC-OPTIMISTIC " + heuristic_path)
+#     conclusion = ""
+#     distance = {}
+#     for state in end:
+#         distance = dijkstra(state, transitions, distance)
+#
+#     for state in transitions:
+#         condition = ("OK" if float(transitions[state].h_value) <= float(distance[transitions[state].name]) else "ERR")
+#         print("[CONDITION]: [" + condition + "] h(" + transitions[state].name + ") <= h*: " + str(
+#             float(transitions[state].h_value)) + " <= " + str(float(distance[transitions[state].name])))
+#         if condition == "ERR":
+#             conclusion = " not"
+#     print("[CONCLUSION]: Heuristic is" + conclusion + " optimistic.")
 
 
 def algorithm_output(n, visited):
