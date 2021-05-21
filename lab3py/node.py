@@ -7,3 +7,5 @@ class Node:
         self.children = []
         self.leaf = False
         self.depth=0
+
+
