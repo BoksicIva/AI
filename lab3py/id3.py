@@ -4,15 +4,12 @@ import copy
 
 vec = []
 
-
 # https://www.geeksforgeeks.org/print-all-root-to-leaf-paths-of-an-n-ary-tree/
-
 
 class ID3():
 
     def __init__(self):
         pass
-
 
     def max_frequency(self, frequency):
         return max(frequency, key=lambda k: frequency[k])
@@ -52,25 +49,25 @@ class ID3():
         node = Node()
         node.children = []
 
-        if not D.rows :
+        if not D.rows:
             node.leaf = True
             node.decision = self.max_frequency(frequency)
             return node
 
         frequency = self.labels_frequency(D.rows, D.target_index)
 
-        if not X or  len(frequency.keys()) == 1:  # savrsena podjela da je sve "DA" ili sve "NE" ili ne postoji vise atributa po kojima se dijeli
+        if not X or len(
+                frequency.keys()) == 1:  # savrsena podjela da je sve "DA" ili sve "NE" ili ne postoji vise atributa po kojima se dijeli
             node.decision = self.max_frequency(frequency)
             node.leaf = True
             return node
 
-        x,V_x, gain, index = self.max_gain(D, frequency, y)
+        x, V_x, gain, index = self.max_gain(D, frequency, y)
 
         node.feature_name = x
-        list_of_attributes=copy.copy(X)
+        list_of_attributes = copy.copy(X)
         if x in list_of_attributes:
             list_of_attributes.remove(x)
-
 
         for v in V_x:
             node2 = Node()
@@ -85,7 +82,7 @@ class ID3():
             Dnew = copy.copy(D)
 
             Dnew.rows = newrows
-            Dnew.attributes=list_of_attributes
+            Dnew.attributes = list_of_attributes
 
             new_node = self.fit(Dnew, D, Dnew.attributes, y)
 
@@ -94,13 +91,13 @@ class ID3():
 
         return node
 
-    def fit2(self, D, D_parent, X, y, depth,inner_depth):
+    def fit2(self, D, D_parent, X, y, depth, inner_depth):
 
         frequency = self.labels_frequency(D_parent.rows, D_parent.target_index)
 
         node = Node()
         node.children = []
-        node.depth=inner_depth
+        node.depth = inner_depth
 
         if not D.rows or node.depth == depth:
             node.leaf = True
@@ -114,18 +111,17 @@ class ID3():
             node.leaf = True
             return node
 
-        x, V_x ,gain, index = self.max_gain(D, frequency, y)
+        x, V_x, gain, index = self.max_gain(D, frequency, y)
         node.feature_name = x
         list_of_attributes = copy.copy(X)
         if x in list_of_attributes:
             list_of_attributes.remove(x)
 
-
         for v in V_x:
             node2 = Node()
             node2.feature_value = v
             node2.feature_name = x
-            node2.depth = node.depth+1
+            node2.depth = node.depth + 1
             newrows = []
             for row in D.rows:
 
@@ -134,7 +130,7 @@ class ID3():
             Dnew = copy.copy(D)
             Dnew.rows = newrows
             Dnew.attributes = list_of_attributes
-            if node.depth +1== int(depth):
+            if node.depth + 1 == int(depth):
                 node.children.append(node2)
                 node3 = Node()
                 node3.leaf = True
@@ -144,14 +140,14 @@ class ID3():
                 node2.children.append(node3)
                 continue
 
-            new_node = self.fit2(Dnew, D, Dnew.attributes, y, depth,inner_depth+1)
+            new_node = self.fit2(Dnew, D, Dnew.attributes, y, depth, inner_depth + 1)
             new_node.depth = node.depth + 2
             node2.children.append(new_node)
             node.children.append(node2)
 
         return node
 
-    def predict(self, node, row, keys,dataset):
+    def predict(self, node, row, keys, dataset):
         while not node.leaf:
             if not node.feature_value:
                 found = False
@@ -184,9 +180,6 @@ class ID3():
 
         return node.decision
 
-
-
-
     def printPath(self, vec):
         for ele in vec:
             print(ele, end=" ")
@@ -203,7 +196,6 @@ class ID3():
         if root.feature_value:
             vec.append(str(vec.__len__() + 1) + ":" + root.feature_name + "=" + root.feature_value)
 
-
         if (len(root.children) == 0):
             vec.append(root.decision)
             self.printPath(vec)
@@ -213,9 +205,8 @@ class ID3():
         for i in range(len(root.children)):
             self.printAllRootToLeafPaths(root.children[i])
 
-
         if vec and root.feature_value:
-           vec.pop()
+            vec.pop()
 
     def accuracy_score(self, predictions, decision):
         num_data = len(decision)
@@ -273,7 +264,7 @@ class ID3():
         return_col = ""
         keys = []
         return_index = 0
-        gain_attributes={}
+        gain_attributes = {}
 
         for attribute in data.attributes:
             index = data.keys[attribute]
@@ -291,16 +282,18 @@ class ID3():
                 new_entorpy = self.entropy(frequency_of_labels)
                 gain -= values[key] * new_entorpy / len(data.rows)
 
-            gain_attributes[attribute]=gain
-            if gain > maxGain or len(data.attributes)==1 or (gain == maxGain and return_col!= "" and return_col > attribute) or (gain==0 and return_col== ""):
+            gain_attributes[attribute] = gain
+            if gain > maxGain or len(data.attributes) == 1 or (
+                    gain == maxGain and return_col != "" and return_col > attribute) or (
+                    gain == 0 and return_col == ""):
                 maxGain = gain
                 return_col = attribute
                 keys = sorted(values.keys())
                 return_index = index
 
-        gain_attributes=dict(sorted(gain_attributes.items(), key=lambda item: format(item[1],'.4f'),reverse=True))
+        gain_attributes = dict(sorted(gain_attributes.items(), key=lambda item: format(item[1], '.4f'), reverse=True))
         for key in gain_attributes:
-            print("IG("+key+")="+str(format(gain_attributes[key],'.4f')),end=" ")
+            print("IG(" + key + ")=" + str(format(gain_attributes[key], '.4f')), end=" ")
         print()
 
-        return return_col,list(keys), maxGain, return_index
+        return return_col, list(keys), maxGain, return_index
